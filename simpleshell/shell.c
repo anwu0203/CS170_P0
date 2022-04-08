@@ -82,6 +82,9 @@ void fchild(char **args,int inPipe, int outPipe)
     /*Call dup2 to setup redirection, and then call excevep*/
 
     /*Your solution*/
+    dup2(inPipe, 0);
+    dup2(outPipe, 1);
+    execReturn = execvp(args[0], args);
 
     if (execReturn < 0) 
     { 
@@ -91,6 +94,10 @@ void fchild(char **args,int inPipe, int outPipe)
       
     _exit(0);
 
+  }
+
+  if (pid > 0){
+    wait(NULL);
   }
 
   if (pid < 0)
@@ -127,6 +134,10 @@ void runcmd(char * linePtr, int length, int inPipe, int outPipe)
   {
     /*Exit if seeing "exit" command*/
     /*Your solution*/
+    char strexit[] = "exit";
+    if (strcmp(args[0], strexit) == 0){
+      exit(0);
+    }
             
     if (*nextChar == '<' && inPipe == 0) 
     {
@@ -139,12 +150,16 @@ void runcmd(char * linePtr, int length, int inPipe, int outPipe)
 
       /* Change inPipe so it follows the redirection */ 
       /*Your solutuon*/
+      inPipe = open(in[0], O_RDONLY);
 
     }
 
     if (*nextChar == '>')
     {   /*It is output redirection, setup the file name to write*/
         /*Your solutuon*/
+        char * in[length];
+        nextChar = parse(nextChar+1,in);
+        outPipe = open(in[0], O_WRONLY | O_CREAT, 0644);
           
     }
 
@@ -152,8 +167,14 @@ void runcmd(char * linePtr, int length, int inPipe, int outPipe)
     { /*It is a pipe, setup the input and output descriptors */
       /*execute the subcommand that has been parsed, but setup the output using this pipe*/
       /*Your solution*/
+      int fd[2];
+      pipe(fd);
+      fchild(args, inPipe, fd[1]);
       /*execute the remaining subcommands, but setup the input using this pipe*/
       /*Your solution*/
+      inPipe = fd[0];
+      runcmd(nextChar+1, length, inPipe, outPipe);
+      
 
       return;
     }
